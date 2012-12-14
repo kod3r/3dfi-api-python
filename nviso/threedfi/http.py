@@ -29,6 +29,7 @@ from poster.streaminghttp import register_openers
 import urllib
 import urllib2
 import json
+import os
 register_openers()
 
 class nViso3DFIException(BaseException):
@@ -61,21 +62,32 @@ class Response(object):
 class nViso3DFIHttpClient(object):
 
     # API base path
-    API_URL_SECURE         = 'https://3dfi.nviso.net/api/v1/'
-    API_URL_STANDARD     = 'http://3dfi.nviso.net/api/v1/'
+	API_URL_BASE		= '3dfi.nviso.net/api/v1/'
+    API_URL_SECURE       = 'https://' + API_URL_BASE
+    API_URL_STANDARD     = 'http://' + API_URL_BASE
 
-    def __init__(self, app_id, app_key, api_url=API_URL_SECURE ):
+    def __init__(self, app_id=None, app_key=None, api_url=API_URL_SECURE ):
         """
         Initialize the nViso 3DFI api http client.
-        :param app_id: The app_id given by your nviso subscription
+        :param app_id: The app_id given by your nviso subscription If None uses environment variable NVISO_3DFI_APP_ID.
         :type app_id: string
-        :param app_key: The app_key given by your nviso subscription
+        :param app_key: The app_key given by your nviso subscription. If None uses environment variable NVISO_3DFI_APP_KEY.
         :type app_key: string
-        :param api_url: The api_url given by your nviso subscription
+        :param api_url: The api_url given by your nviso subscription.
         :type api_url: string
         """
-        self.app_id= app_id
-        self.app_key = app_key
+		
+		if app_id:
+			self.app_id = app_id
+		else:
+			self.app_id = os.environ['NVISO_3DFI_APP_ID']
+			
+		if app_key:
+			self.app_key = app_key
+		else:
+			self.app_key = os.environ['NVISO_3DFI_APP_KEY']
+
+        self.seq_num = 0
 
         # Services supported by the API
         self.service = {
@@ -88,10 +100,10 @@ class nViso3DFIHttpClient(object):
 
         try:
             response = urllib2.urlopen(request)
-            status_code = int(resp.status)
+            status_code = int(response.getcode())
 
             # Format response to create result
-            if format=='xml':
+            if format=='eml':
                 content = xmldom.parseString(response.read())
             else:
                 content = json.loads(response.read())
@@ -99,11 +111,13 @@ class nViso3DFIHttpClient(object):
             response.close()
 
         except urllib2.HTTPError, e:
-            raise nViso3DFIException('Failed to send request: %s' % str(e))
+            raise nViso3DFIException('Server could not fulfill the request: %s' % str(e))
+        except urllib2.URLError, e:
+            raise nViso3DFIException('Failed to reach the server : %s' % str(e))
 
-        return Response( content, status_code, request.url )
+        return Response( content, status_code, request.get_full_url() )
 
-    def process_image_file(self, image_path, app_session=None, seq_num=None):
+    def process_image_path(self, image_path, app_session=None, seq_num=None):
         """
         Process an image stored in your filesystem.
         :param image_path: The path of the image file
@@ -124,7 +138,7 @@ class nViso3DFIHttpClient(object):
         :type image_data: string
         :param app_session: An optional session id as a string
         :type app_session: string
-        :param seq_num: An optional image sequence number
+        :param seq_num: An optional image sequence number (None = Auto increment)
         :type seq_num: int
         :param format: The return format for the service.
         :type format: string
@@ -143,6 +157,10 @@ class nViso3DFIHttpClient(object):
             request_dict['app_session'] = app_session
         if seq_num:
              request_dict['seq_number'] = seq_num
+        else:
+            # Auto increment the seq number when None is provided
+            request_dict['seq_number'] = self.seq_num
+            self.seq_num = self.seq_num + 1
         if format:
              request_dict['format'] = format
 
@@ -193,6 +211,10 @@ class nViso3DFIHttpClient(object):
             request_dict['app_session'] = app_session
         if seq_num:
              request_dict['seq_number'] = seq_num
+        else:
+            # Auto increment the seq number when None is provided
+            request_dict['seq_number'] = self.seq_num
+            self.seq_num = self.seq_num + 1
         if format:
              request_dict['format'] = format
 
