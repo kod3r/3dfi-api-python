@@ -24,7 +24,7 @@ source code") for `nviso-3dfi-api-python`, and then run:
 
 You may need to run the above commands with `sudo`.
 
-### Getting Started
+## Getting Started
 
 Getting started with the nViso 3D Facial Imaging Python SDK couldn't be easier. Create a `nViso3DFIHttpClient` and you're ready to go. You will find a [sample file](https://github.com/nViso/3dfi-api-python/blob/master/example/example_simple.py) that allows you to get started immediately in the [example folder](https://github.com/nViso/3dfi-api-python/blob/master/example/).
 
